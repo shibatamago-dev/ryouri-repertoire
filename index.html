@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>料理レパートリーチェック</title>
+<meta name="description" content="作れる料理を主材×調理法の地図にすると、手薄なところが見えてくる。定番48品＋自分の料理を「作れる／作ったことない」で棚卸しする小さなツール。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="料理レパートリーチェック">
+<meta property="og:description" content="作れる料理を主材×調理法の地図にすると、手薄なところが見えてくる。定番48品＋自分の料理を「作れる／作ったことない」で棚卸しする小さなツール。">
+<meta property="og:image" content="https://shibatamago-dev.github.io/ryouri-repertoire/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#fdfcf9; --surface:#ffffff; --text:#23281f; --dim:#6d7263; --border:#e4e1d6;
+  --accent:#2f5d3a; --accent-ink:#ffffff; --accent-soft:#e7efe2;
+  --shu:#d95d39; --shu-soft:#fbe9e0; --cell-blank:#f4f1e8; --chip-none:#efede6;
+  --font-display:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --font-body:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","YuGothic","Noto Sans JP",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#191c16; --surface:#22261e; --text:#f0f1e9; --dim:#a3a894; --border:#3a3f31;
+    --accent:#7fb98a; --accent-ink:#14220f; --accent-soft:#2b3a29;
+    --shu:#ef8a63; --shu-soft:#42281d; --cell-blank:#262a21; --chip-none:#2c3026;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body)}
+button,[role="button"],select,input:not([type="checkbox"],[type="radio"]){min-height:2rem;touch-action:manipulation}
+button{font-family:inherit;cursor:pointer;color:inherit;background:none;border:none;padding:0}
+button:disabled{cursor:default}
+main{margin:0 auto;max-width:56rem;padding:0 1rem 2.5rem}
+.font-display{font-family:var(--font-display)}
+h1{font-family:var(--font-display);font-size:1.5rem;line-height:1.375;font-weight:600;margin:0}
+h2{margin:0}
+p{margin:0}
+.pt5{padding-top:1.25rem}
+.intro{margin-top:.5rem;font-size:.875rem;line-height:1.625;color:var(--dim)}
+.counts{margin-top:1rem;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:1.25rem;row-gap:.25rem;font-size:.875rem}
+.counts strong{font-size:1.125rem}
+.counts .can-num{color:var(--accent)}
+.legend{margin-top:.75rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;font-size:11px}
+.legend2{margin-top:.5rem;display:flex;flex-wrap:wrap;align-items:center;column-gap:.75rem;row-gap:.375rem;font-size:11px;line-height:1.625}
+.dim{color:var(--dim)}
+.chip-sample{border-radius:.375rem;padding:.125rem .5rem}
+.chip-sample-can{background:var(--accent);color:var(--accent-ink)}
+.chip-sample-never{background:var(--chip-none);color:var(--dim)}
+.tag-thin{border-radius:.375rem;border:1px dashed var(--shu);padding:.125rem .5rem;font-weight:500;color:var(--shu)}
+.tag-empty{border-radius:.375rem;border:1px dashed var(--dim);padding:.125rem .5rem;font-weight:500;color:var(--dim)}
+.alert{margin-top:.75rem;font-size:.875rem;color:var(--shu)}
+.btn-row{margin-top:1rem;display:flex;flex-wrap:wrap;gap:.5rem}
+.btn{border-radius:.5rem;padding:.5rem 1rem;font-size:.875rem;border:1px solid var(--border)}
+.btn-shu{background:var(--shu);border-color:var(--shu);color:#fff;font-weight:600}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn-none{background:var(--chip-none);border-color:var(--border);color:var(--text);font-weight:600}
+.btn-surface{background:var(--surface);border-color:var(--border);color:var(--text);font-weight:600;box-shadow:inset 0 0 0 1px var(--border)}
+.btn[disabled]{opacity:.4}
+.btn-sm{padding:.375rem .75rem;font-size:.75rem;border-radius:.5rem}
+.note{margin-top:.5rem;font-size:.75rem;line-height:1.625;color:var(--dim)}
+.panel{margin-top:1.25rem;border-radius:.75rem;border:2px solid var(--accent);background:var(--surface);padding:1rem}
+.panel-shu{border-color:var(--shu)}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+.panel-kicker{font-size:.75rem;font-weight:500;letter-spacing:.025em;color:var(--accent)}
+.panel-kicker-shu{color:var(--shu)}
+.panel-title{font-family:var(--font-display);margin-top:.25rem;font-size:1.875rem;line-height:2.25rem;font-weight:600}
+.close-btn{border-radius:.375rem;padding:.25rem .5rem;font-size:1.125rem;line-height:1;color:var(--dim)}
+.panel .sub{margin-top:.5rem;font-size:.875rem;color:var(--dim);line-height:1.625}
+.panel .divider{margin-top:1rem;border-top:1px solid var(--border);padding-top:.75rem}
+.panel .divider-label{font-size:.75rem;font-weight:500;color:var(--dim)}
+label.field-label{display:block;margin-top:.75rem;font-size:.875rem;font-weight:500}
+.text-input,.select-input{margin-top:.25rem;width:100%;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:.5rem .75rem;font-size:1rem;font-family:inherit}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
+.keyword-code{border-radius:.5rem;background:var(--cell-blank);padding:.5rem .75rem;font-size:1rem;font-weight:600;font-family:ui-monospace,monospace}
+.linklike{font-size:.875rem;font-weight:500;color:var(--shu);text-decoration:underline;text-underline-offset:2px}
+.linklike-dim{color:var(--dim)}
+/* map */
+.map-section{margin-top:1.5rem}
+.desktop-map{display:none}
+@media (min-width:768px){.desktop-map{display:block}.mobile-map{display:none}}
+.grid-map{display:grid;gap:.25rem}
+.cell{display:flex;min-height:3.5rem;flex-direction:column;gap:.25rem;border-radius:.375rem;padding:.25rem}
+.cell-blankbg{background:var(--cell-blank)}
+.cell-canbg{background:var(--accent-soft)}
+.cell-selected{box-shadow:inset 0 0 0 2px var(--shu)}
+.chip{width:100%;border-radius:.375rem;border:1px solid transparent;padding:.25rem .375rem;text-align:left;font-size:11px;line-height:1.25;font-weight:500;word-break:break-all;transition:background-color .15s,color .15s}
+.chip-can{background:var(--accent);color:var(--accent-ink)}
+.chip-never{background:var(--chip-none);color:var(--dim)}
+.cell-tag{margin-top:auto;width:100%;border-radius:.375rem;border:1px dashed;padding:.25rem;font-size:10px;line-height:1.25;font-weight:500}
+.cell-tag-thin{border-color:var(--shu);color:var(--shu)}
+.cell-tag-empty{border-color:var(--dim);color:var(--dim)}
+.cell-add{width:100%;border-radius:.375rem;border:1px solid var(--border);background:var(--surface);padding:.25rem;font-size:10px;line-height:1.25;font-weight:600;color:var(--accent)}
+.head-btn{font-weight:600;color:var(--dim)}
+.head-btn span{text-decoration:underline dotted;text-underline-offset:4px}
+.head-row{display:flex;height:100%;width:100%;align-items:center;justify-content:center;font-size:.875rem;font-weight:600}
+.head-row span{text-decoration:underline dotted;text-underline-offset:4px}
+.head-col{width:100%;padding-bottom:.25rem;text-align:center;font-size:.75rem}
+/* mobile overview */
+.ov-note{margin-bottom:.5rem;font-size:.75rem;line-height:1.625;color:var(--dim)}
+.ov-head{display:flex;min-height:2rem;align-items:center;justify-content:center;padding:0 .125rem;text-align:center;font-size:10px;line-height:1.25;font-weight:600;color:var(--dim);text-decoration:underline dotted;text-underline-offset:2px}
+.ov-rowhead{display:flex;min-height:2rem;align-items:center;justify-content:center;font-size:11px;font-weight:600;text-decoration:underline dotted;text-underline-offset:2px}
+.ov-cell{display:flex;aspect-ratio:1/1;min-height:2rem;width:100%;align-items:center;justify-content:center;border-radius:.375rem;font-size:11px;font-weight:700}
+.ov-can{background:var(--accent);color:var(--accent-ink)}
+.ov-thin{border:1px dashed var(--shu);background:var(--cell-blank);color:var(--shu)}
+.ov-empty{border:1px dashed var(--dim);background:var(--cell-blank);color:var(--dim)}
+.ov-selected{box-shadow:inset 0 0 0 2px var(--shu)}
+.ov-caption{margin-top:.375rem;font-size:11px;line-height:1.625;color:var(--dim)}
+.detail-list{margin-top:1.5rem;display:flex;flex-direction:column;gap:1.5rem}
+.detail-head{margin-bottom:.5rem;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.75rem;border-bottom:2px solid var(--accent);padding-bottom:.375rem}
+.detail-head h3{margin:0;font-family:var(--font-display);font-size:1.125rem;font-weight:600}
+.detail-head h3 button{font:inherit}
+.detail-head .meta{font-size:11px;color:var(--dim)}
+.detail-box{border:1px solid var(--border);border-radius:.75rem;overflow:hidden;background:var(--surface)}
+.detail-row{display:flex;align-items:stretch}
+.detail-row + .detail-row{border-top:1px solid var(--border)}
+.detail-method{display:flex;width:4.5rem;flex-shrink:0;align-items:center;justify-content:center;border-right:1px solid var(--border);background:var(--cell-blank);padding:.25rem;text-align:center;font-size:11px;line-height:1.25;font-weight:600;color:var(--dim);text-decoration:underline dotted;text-underline-offset:2px}
+.detail-cellwrap{min-width:0;flex:1;padding:.375rem}
+/* sections below map */
+.section{margin-top:2rem}
+.section-io{margin-top:2.5rem}
+.section h2{font-family:var(--font-display);font-size:1.125rem;font-weight:600}
+.section h3{font-size:.875rem;font-weight:600;margin:0}
+.hidden-list{margin:.5rem 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.5rem}
+.hidden-list button{border-radius:.375rem;background:var(--surface);padding:.375rem .625rem;font-size:.75rem;font-weight:500;box-shadow:inset 0 0 0 1px var(--border)}
+textarea.json{margin-top:.5rem;width:100%;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:.75rem;font-family:ui-monospace,monospace;font-size:.75rem;line-height:1.625}
+.status-ok{margin-top:.5rem;font-size:.875rem;color:var(--accent)}
+.reset-zone{margin-top:2.5rem;border-top:1px solid var(--border);padding-top:1rem}
+.confirm-row{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.confirm-row p{font-size:.875rem}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none !important}
+</style>
+<script data-goatcounter="https://shibatamago-dev.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+<main id="app"></main>
+<script>
+"use strict";
+/* ===== カタログ（既存版 catalog.ts と同一） ===== */
+const INGREDIENTS=[
+ {id:"chicken",label:"鶏",searchWord:"鶏肉"},
+ {id:"pork",label:"豚",searchWord:"豚肉"},
+ {id:"beef",label:"牛",searchWord:"牛肉"},
+ {id:"fish",label:"魚",searchWord:"魚"},
+ {id:"egg-tofu",label:"卵・豆腐",searchWord:"豆腐"},
+ {id:"veg",label:"野菜",searchWord:"野菜"}
+];
+const METHODS=[
+ {id:"grill",label:"焼く",searchWord:"焼く"},
+ {id:"simmer",label:"煮る",searchWord:"煮る"},
+ {id:"stirfry",label:"炒める",searchWord:"炒める"},
+ {id:"fry",label:"揚げる",searchWord:"揚げる"},
+ {id:"steam-mix",label:"蒸す・和える",searchWord:"蒸す"},
+ {id:"soup",label:"汁物",searchWord:"汁物"}
+];
+function d(id,name,ingredient,method){return{id:id,name:name,ingredient:ingredient,method:method};}
+const DISHES=[
+ d("chicken-teriyaki","鶏の照り焼き","chicken","grill"),
+ d("oyakodon","親子丼","chicken","simmer"),
+ d("chicken-pepper-stirfry","鶏とピーマンの炒め物","chicken","stirfry"),
+ d("karaage","鶏の唐揚げ","chicken","fry"),
+ d("chicken-nanban","チキン南蛮","chicken","fry"),
+ d("bangbangji","バンバンジー","chicken","steam-mix"),
+ d("chicken-dumpling-soup","鶏団子スープ","chicken","soup"),
+ d("buta-shogayaki","豚の生姜焼き","pork","grill"),
+ d("buta-kakuni","豚の角煮","pork","simmer"),
+ d("butabara-daikon","豚バラ大根","pork","simmer"),
+ d("hoikoro","回鍋肉","pork","stirfry"),
+ d("buta-kimchi","豚キムチ炒め","pork","stirfry"),
+ d("tonkatsu","とんかつ","pork","fry"),
+ d("reishabu","冷しゃぶサラダ","pork","steam-mix"),
+ d("tonjiru","豚汁","pork","soup"),
+ d("hamburg","ハンバーグ","beef","grill"),
+ d("beef-steak","ビーフステーキ","beef","grill"),
+ d("gyudon","牛丼","beef","simmer"),
+ d("beef-stew","ビーフシチュー","beef","simmer"),
+ d("chinjao-rosu","青椒肉絲","beef","stirfry"),
+ d("menchi-katsu","メンチカツ","beef","fry"),
+ d("roast-beef","ローストビーフ","beef","steam-mix"),
+ d("beef-tail-soup","牛テールスープ","beef","soup"),
+ d("sake-shioyaki","鮭の塩焼き","fish","grill"),
+ d("buri-teriyaki","ぶりの照り焼き","fish","grill"),
+ d("saba-misoni","さばの味噌煮","fish","simmer"),
+ d("sakana-ankake","白身魚の野菜あんかけ","fish","stirfry"),
+ d("aji-fry","アジフライ","fish","fry"),
+ d("sakana-hoil-yaki","魚のホイル焼き","fish","steam-mix"),
+ d("arajiru","あら汁","fish","soup"),
+ d("tamagoyaki","卵焼き","egg-tofu","grill"),
+ d("omurice","オムライス","egg-tofu","grill"),
+ d("nikudofu","肉豆腐","egg-tofu","simmer"),
+ d("mabo-dofu","麻婆豆腐","egg-tofu","stirfry"),
+ d("goya-champuru","ゴーヤチャンプルー","egg-tofu","stirfry"),
+ d("agedashi-dofu","揚げ出し豆腐","egg-tofu","fry"),
+ d("chawanmushi","茶碗蒸し","egg-tofu","steam-mix"),
+ d("hiyayakko","冷奴","egg-tofu","steam-mix"),
+ d("tofu-misoshiru","豆腐の味噌汁","egg-tofu","soup"),
+ d("nasu-dengaku","なすの田楽","veg","grill"),
+ d("kabochano-nimono","かぼちゃの煮物","veg","simmer"),
+ d("hijiki-nimono","ひじきの煮物","veg","simmer"),
+ d("yasai-itame","野菜炒め","veg","stirfry"),
+ d("kinpira","きんぴらごぼう","veg","stirfry"),
+ d("yasai-tempura","野菜の天ぷら","veg","fry"),
+ d("onyasai","温野菜","veg","steam-mix"),
+ d("ohitashi","ほうれん草のおひたし","veg","steam-mix"),
+ d("kenchin-jiru","けんちん汁","veg","soup")
+];
+function ingredientOf(id){return INGREDIENTS.find(i=>i.id===id)||INGREDIENTS[0];}
+function methodOf(id){return METHODS.find(m=>m.id===id)||METHODS[0];}
+function cellKeyword(ing,met){return ingredientOf(ing).searchWord+" "+methodOf(met).searchWord+" 簡単 レシピ";}
+function cellLabel(ing,met){return ingredientOf(ing).label+" × "+methodOf(met).label;}
+const STATE_LABEL={can:"作れる",never:"作ったことない"};
+function toggled(s){return s==="can"?"never":"can";}
+
+/* ===== 保存（localStorage のみ。サーバー通信は一切しない） ===== */
+const STORAGE_KEY="ryouri-repertoire-check:v1";
+let marks=new Map();        // dishId -> {state:"can"|"never"|null, hidden:boolean}
+let customDishes=[];        // [{id,name,ingredient,method}]
+function save(){
+  const payload={marks:Array.from(marks.entries()).map(([dishId,m])=>({dishId:dishId,state:m.state,hidden:!!m.hidden})),customDishes:customDishes};
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));}catch(e){/* 保存できない環境では画面内のみで継続 */}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(parsed&&Array.isArray(parsed.marks)){
+      for(const m of parsed.marks){
+        if(m&&typeof m.dishId==="string")marks.set(m.dishId,{state:(m.state==="can"||m.state==="never")?m.state:null,hidden:m.hidden===true});
+      }
+    }
+    if(parsed&&Array.isArray(parsed.customDishes)){
+      customDishes=parsed.customDishes.filter(c=>c&&typeof c.id==="string"&&typeof c.name==="string"&&typeof c.ingredient==="string"&&typeof c.method==="string");
+    }
+  }catch(e){marks=new Map();customDishes=[];}
+}
+function newCustomDishId(){
+  const rand=(window.crypto&&"randomUUID" in window.crypto)?window.crypto.randomUUID().replace(/-/g,"").slice(0,12):Math.random().toString(36).slice(2,14);
+  return "custom-"+Date.now().toString(36)+"-"+rand;
+}
+
+/* ===== 画面状態 ===== */
+let organizing=false,picked=null,lineTarget=null,copied=false,copyFailed=false,confirmReset=false;
+let exportJson=null,exportCopied=false,exportError=null;
+let importText="",importError=null,importDone=null,confirmImport=false;
+let addCell=null,addName="",addError=null;
+let editingCustom=null,editName="",editIngredient="",editMethod="",editError=null,confirmDeleteCustom=false;
+
+/* ===== 派生データ ===== */
+function customIds(){return new Set(customDishes.map(x=>x.id));}
+function allDishes(){return DISHES.concat(customDishes);}
+function stateOf(id){const m=marks.get(id);return (m&&m.state)||"never";}
+function isHidden(id){const m=marks.get(id);return !!(m&&m.hidden);}
+function visibleDishes(){return allDishes().filter(x=>!isHidden(x.id));}
+function hiddenDishes(){return allDishes().filter(x=>isHidden(x.id));}
+function dishesInCell(cell){return visibleDishes().filter(x=>x.ingredient===cell.ingredient&&x.method===cell.method);}
+function inLine(dish,line){return line.axis==="ingredient"?dish.ingredient===line.lineId:dish.method===line.lineId;}
+function dishesInLine(line){return visibleDishes().filter(x=>inLine(x,line));}
+function hiddenInLine(line){return hiddenDishes().filter(x=>inLine(x,line));}
+function isThin(cell){const ds=dishesInCell(cell);return ds.length>0&&!ds.some(x=>stateOf(x.id)==="can");}
+function isEmpty(cell){return dishesInCell(cell).length===0;}
+function allCells(){const out=[];for(const i of INGREDIENTS)for(const m of METHODS)out.push({ingredient:i.id,method:m.id});return out;}
+function thinCells(){return allCells().filter(isThin);}
+function emptyCells(){return allCells().filter(isEmpty);}
+function blankCells(){return thinCells().concat(emptyCells());}
+function counts(){const v=visibleDishes();let can=0;for(const x of v)if(stateOf(x.id)==="can")can++;return{can:can,never:v.length-can,total:v.length};}
+
+/* ===== 変更操作（すべてローカルで即時完了） ===== */
+function patchMark(dishId,patch){
+  const cur=marks.get(dishId)||{state:null,hidden:false};
+  marks.set(dishId,{state:("state" in patch)?patch.state:cur.state,hidden:("hidden" in patch)?patch.hidden:cur.hidden});
+}
+function setStates(ids,state){for(const id of ids)patchMark(id,{state:state});save();render();}
+function setHiddenFlags(ids,hidden){for(const id of ids)patchMark(id,{hidden:hidden});save();render();}
+async function copyText(text){
+  try{await navigator.clipboard.writeText(text);return true;}
+  catch(e){
+    try{
+      const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+      document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");document.body.removeChild(ta);return ok;
+    }catch(e2){return false;}
+  }
+}
+function scrollToEl(el){
+  if(!el)return;
+  const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({behavior:reduce?"auto":"smooth",block:"nearest"});
+}
+
+/* ===== DOM ヘルパー ===== */
+function el(tag,cls,text){
+  const n=document.createElement(tag);
+  if(cls)n.className=cls;
+  if(text!=null)n.textContent=text;
+  return n;
+}
+function btn(cls,text,onClick,attrs){
+  const b=el("button",cls,text);
+  b.type="button";
+  if(attrs)for(const k in attrs){
+    if(k==="disabled")b.disabled=!!attrs[k];
+    else if(k==="ariaLabel")b.setAttribute("aria-label",attrs[k]);
+    else if(k==="ariaPressed")b.setAttribute("aria-pressed",attrs[k]);
+    else b.setAttribute(k,attrs[k]);
+  }
+  if(onClick)b.addEventListener("click",onClick);
+  return b;
+}
+
+/* ===== 操作ハンドラ ===== */
+function onChipTap(dish){
+  if(organizing){
+    if(customIds().has(dish.id)){
+      const c=customDishes.find(x=>x.id===dish.id);
+      if(c)openEditCustom(c);
+      return;
+    }
+    setHiddenFlags([dish.id],true);
+    return;
+  }
+  setStates([dish.id],toggled(stateOf(dish.id)));
+}
+function openLine(line){picked=null;lineTarget=line;render();scrollToEl(document.getElementById("line-panel"));}
+function applyLineState(state){
+  if(!lineTarget)return;
+  const ids=dishesInLine(lineTarget).map(x=>x.id);
+  if(ids.length===0)return;
+  setStates(ids,state);
+}
+function applyLineHidden(hidden){
+  if(!lineTarget)return;
+  const src=hidden?dishesInLine(lineTarget):hiddenInLine(lineTarget);
+  const ids=src.map(x=>x.id);
+  if(ids.length===0)return;
+  setHiddenFlags(ids,hidden);
+}
+function toggleAllState(){
+  const v=visibleDishes();
+  if(v.length===0)return;
+  const allCan=v.every(x=>stateOf(x.id)==="can");
+  setStates(v.map(x=>x.id),allCan?"never":"can");
+}
+function pickRandomBlank(){
+  const blanks=blankCells();
+  if(blanks.length===0)return;
+  const cell=blanks[Math.floor(Math.random()*blanks.length)];
+  lineTarget=null;picked=cell;copied=false;copyFailed=false;
+  render();scrollToEl(document.getElementById("picked-panel"));
+}
+function openPicked(cell){
+  lineTarget=null;addCell=null;editingCustom=null;picked=cell;copied=false;copyFailed=false;
+  render();scrollToEl(document.getElementById("picked-panel"));
+}
+function openAdd(cell){
+  picked=null;lineTarget=null;editingCustom=null;confirmDeleteCustom=false;
+  addCell=cell;addName="";addError=null;
+  render();scrollToEl(document.getElementById("add-panel"));
+  const inp=document.getElementById("add-dish-name");if(inp)inp.focus();
+}
+function submitAdd(){
+  if(!addCell)return;
+  const name=addName.trim();
+  if(!name){addError="料理名を入れてください。";render();scrollToEl(document.getElementById("add-panel"));return;}
+  if(allDishes().some(x=>x.name===name)){addError="同じ名前の料理がすでにあります。";render();scrollToEl(document.getElementById("add-panel"));return;}
+  customDishes.push({id:newCustomDishId(),name:name,ingredient:addCell.ingredient,method:addCell.method});
+  addCell=null;addName="";addError=null;
+  save();render();
+}
+function openEditCustom(c){
+  picked=null;lineTarget=null;addCell=null;
+  editingCustom=c;editName=c.name;editIngredient=c.ingredient;editMethod=c.method;editError=null;confirmDeleteCustom=false;
+  render();scrollToEl(document.getElementById("edit-panel"));
+}
+function submitEdit(){
+  if(!editingCustom)return;
+  const name=editName.trim();
+  if(!name){editError="料理名を入れてください。";render();scrollToEl(document.getElementById("edit-panel"));return;}
+  if(allDishes().some(x=>x.name===name&&x.id!==editingCustom.id)){editError="同じ名前の料理がすでにあります。";render();scrollToEl(document.getElementById("edit-panel"));return;}
+  const idx=customDishes.findIndex(x=>x.id===editingCustom.id);
+  if(idx>=0)customDishes[idx]={id:editingCustom.id,name:name,ingredient:editIngredient,method:editMethod};
+  editingCustom=null;confirmDeleteCustom=false;editError=null;
+  save();render();
+}
+function deleteEditingCustom(){
+  if(!editingCustom)return;
+  customDishes=customDishes.filter(x=>x.id!==editingCustom.id);
+  marks.delete(editingCustom.id);
+  editingCustom=null;confirmDeleteCustom=false;
+  save();render();
+}
+function doReset(){
+  marks=new Map();customDishes=[];
+  confirmReset=false;picked=null;lineTarget=null;addCell=null;editingCustom=null;confirmDeleteCustom=false;
+  exportJson=null;exportError=null;importDone=null;importError=null;
+  save();render();
+}
+
+/* ===== 書き出し ===== */
+function buildExport(){
+  const all=allDishes();
+  return {
+    app:"ryouri-repertoire-check",
+    version:1,
+    exportedAt:new Date().toISOString(),
+    marks:all.map(x=>({dishId:x.id,state:stateOf(x.id),hidden:isHidden(x.id)})),
+    customDishes:customDishes.map(x=>({id:x.id,name:x.name,ingredient:x.ingredient,method:x.method}))
+  };
+}
+function onExport(){
+  exportJson=JSON.stringify(buildExport(),null,2);
+  exportCopied=false;exportError=null;
+  render();scrollToEl(document.getElementById("io-section"));
+}
+function onDownloadJson(){
+  if(!exportJson)return;
+  const blob=new Blob([exportJson],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="ryouri-repertoire-check.json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+async function onCopyExportJson(){
+  if(!exportJson)return;
+  const ok=await copyText(exportJson);
+  exportCopied=ok;
+  render();scrollToEl(document.getElementById("io-section"));
+  if(ok)setTimeout(()=>{exportCopied=false;const b=document.getElementById("copy-export-btn");if(b)b.textContent="JSONをコピー";},2000);
+}
+
+/* ===== 読み込み（検証＋差分方式。既存版 parseImport と同じ検証） ===== */
+function parseImport(){
+  let parsed;
+  try{parsed=JSON.parse(importText);}
+  catch(e){return{error:"JSONとして読み取れませんでした。書き出した内容をそのまま貼ってください。"};}
+  const rawMarks=Array.isArray(parsed)?parsed:(parsed?parsed.marks:undefined);
+  if(!Array.isArray(rawMarks))return{error:"記録の配列（marks）が見つかりませんでした。書き出したJSONを使ってください。"};
+  const rawCustoms=Array.isArray(parsed)?undefined:(parsed?parsed.customDishes:undefined);
+  const nextCustoms=[];
+  if(rawCustoms!==undefined){
+    if(!Array.isArray(rawCustoms))return{error:"自分の料理の配列（customDishes）の形式が正しくありません。"};
+    if(rawCustoms.length>200)return{error:"自分の料理が多すぎます（上限200品）。"};
+    const ingredientIds=new Set(INGREDIENTS.map(i=>i.id));
+    const methodIds=new Set(METHODS.map(m=>m.id));
+    const presetIds=new Set(DISHES.map(x=>x.id));
+    const presetNames=new Set(DISHES.map(x=>x.name));
+    const seenIds=new Set(),seenNames=new Set();
+    for(const entry of rawCustoms){
+      if(typeof entry!=="object"||entry===null)return{error:"自分の料理の形式が違う行があります。"};
+      const id=entry.id,name=entry.name,ingredient=entry.ingredient,method=entry.method;
+      if(typeof id!=="string"||id.length===0||id.length>80||!id.startsWith("custom-")||presetIds.has(id))return{error:"自分の料理のIDの形式が正しくありません。"};
+      if(typeof name!=="string"||name.trim().length===0||name.trim().length>40)return{error:"自分の料理の名前が正しくありません（1〜40文字）。"};
+      if(typeof ingredient!=="string"||!ingredientIds.has(ingredient))return{error:"自分の料理「"+name+"」の主材が正しくありません。"};
+      if(typeof method!=="string"||!methodIds.has(method))return{error:"自分の料理「"+name+"」の調理法が正しくありません。"};
+      if(seenIds.has(id))return{error:"自分の料理のIDが重複しています。"};
+      if(presetNames.has(name.trim())||seenNames.has(name.trim()))return{error:"料理名「"+name.trim()+"」が重複しています。"};
+      seenIds.add(id);seenNames.add(name.trim());
+      nextCustoms.push({id:id,name:name.trim(),ingredient:ingredient,method:method});
+    }
+  }
+  const knownIds=new Set();
+  for(const x of DISHES)knownIds.add(x.id);
+  for(const x of nextCustoms)knownIds.add(x.id);
+  for(const x of customDishes)knownIds.add(x.id);
+  const seen=new Set(),nextMarks=[];
+  for(const entry of rawMarks){
+    if(typeof entry!=="object"||entry===null)return{error:"記録の形式が違う行があります。"};
+    const dishId=entry.dishId,state=entry.state,hidden=entry.hidden;
+    if(typeof dishId!=="string"||!knownIds.has(dishId))return{error:"このツールにない料理IDが含まれています（"+(typeof dishId==="string"?dishId:"不明")+"）。"};
+    if(state!=="can"&&state!=="never"&&state!==null&&state!==undefined)return{error:"「"+dishId+"」の状態の値が正しくありません。"};
+    if(hidden!==undefined&&typeof hidden!=="boolean")return{error:"「"+dishId+"」の表示フラグの値が正しくありません。"};
+    if(seen.has(dishId))continue;
+    seen.add(dishId);
+    nextMarks.push({dishId:dishId,state:(state==null?null:state),hidden:hidden===true});
+  }
+  return{marks:nextMarks,customDishes:nextCustoms};
+}
+function effectiveState(s){return s==null?"never":s;}
+function importTarget(importedMarks,importedCustoms,currentCustoms){
+  const byId=new Map(importedMarks.map(m=>[m.dishId,m]));
+  const importedIds=new Set(importedCustoms.map(x=>x.id));
+  const universe=DISHES.concat(importedCustoms,currentCustoms.filter(x=>!importedIds.has(x.id)));
+  return universe.map(x=>{
+    const m=byId.get(x.id);
+    return m?{dishId:x.id,state:m.state,hidden:m.hidden}:{dishId:x.id,state:null,hidden:false};
+  });
+}
+function applyImport(payload){
+  // 自分の料理の差分（追加・変更・削除）
+  const currentById=new Map(customDishes.map(x=>[x.id,x]));
+  const importedIds=new Set(payload.customDishes.map(x=>x.id));
+  let customSteps=0;
+  for(const c of payload.customDishes){
+    const cur=currentById.get(c.id);
+    if(!cur||cur.name!==c.name||cur.ingredient!==c.ingredient||cur.method!==c.method)customSteps++;
+  }
+  for(const c of customDishes)if(!importedIds.has(c.id))customSteps++;
+  // 記録の差分
+  const target=importTarget(payload.marks,payload.customDishes,customDishes);
+  const diff=target.filter(t=>{
+    const cur=marks.get(t.dishId);
+    return effectiveState(cur?cur.state:null)!==effectiveState(t.state)||((cur&&cur.hidden)||false)!==t.hidden;
+  });
+  const changed=diff.length+customSteps;
+  if(changed===0)return 0;
+  // 差のある品だけ書き換える（ローカル処理なので即時完了）
+  customDishes=payload.customDishes.map(x=>({id:x.id,name:x.name,ingredient:x.ingredient,method:x.method}));
+  for(const t of diff)marks.set(t.dishId,{state:t.state,hidden:t.hidden});
+  // ファイルにない自分の料理の状態行は掃除する
+  const keepIds=new Set(allDishes().map(x=>x.id));
+  for(const id of Array.from(marks.keys()))if(!keepIds.has(id))marks.delete(id);
+  save();
+  return changed;
+}
+function onImport(){
+  const result=parseImport();
+  if(result.error){importError=result.error;importDone=null;confirmImport=false;render();scrollToEl(document.getElementById("io-section"));return;}
+  if(!confirmImport){importError=null;confirmImport=true;render();scrollToEl(document.getElementById("io-section"));return;}
+  const changed=applyImport({marks:result.marks,customDishes:result.customDishes});
+  confirmImport=false;importError=null;
+  importDone=changed===0?"今の記録と差がありませんでした。そのまま使えます。":"読み込みました（"+changed+"件を変更）。マップに反映されています。";
+  render();scrollToEl(document.getElementById("io-section"));
+}
+async function onPickImportFile(file){
+  if(!file)return;
+  try{
+    importText=await file.text();
+    importError=null;importDone=null;confirmImport=false;
+  }catch(e){importError="ファイルを読み取れませんでした。";}
+  render();scrollToEl(document.getElementById("io-section"));
+}
+async function onCopyKeyword(){
+  if(!picked)return;
+  const ok=await copyText(cellKeyword(picked.ingredient,picked.method));
+  copied=ok;copyFailed=!ok;
+  render();scrollToEl(document.getElementById("picked-panel"));
+  if(ok)setTimeout(()=>{copied=false;render();},2000);
+}
+
+/* ===== 描画 ===== */
+function renderChip(dish){
+  const state=stateOf(dish.id);
+  const isCustom=customIds().has(dish.id);
+  const label=organizing
+    ?(isCustom?dish.name+"（自分の料理）を編集する：名前・場所の変更と削除":dish.name+"をマップから外す")
+    :(dish.name+"：現在は"+STATE_LABEL[state]+"。タップで"+STATE_LABEL[toggled(state)]+"に切り替える");
+  const b=btn("chip "+(state==="can"?"chip-can":"chip-never"),(organizing&&!isCustom)?"× "+dish.name:dish.name,()=>onChipTap(dish),{ariaLabel:label});
+  return b;
+}
+function renderCell(cell){
+  const dishes=dishesInCell(cell);
+  const thin=isThin(cell);
+  const empty=dishes.length===0;
+  const blank=thin||empty;
+  const selected=picked&&picked.ingredient===cell.ingredient&&picked.method===cell.method;
+  const wrap=el("div","cell "+(blank?"cell-blankbg":"cell-canbg")+(selected?" cell-selected":""));
+  for(const dish of dishes)wrap.appendChild(renderChip(dish));
+  if(blank){
+    wrap.appendChild(btn("cell-tag "+(empty?"cell-tag-empty":"cell-tag-thin"),empty?"空き":"手薄",()=>openPicked(cell),{
+      ariaLabel:cellLabel(cell.ingredient,cell.method)+(empty?"は空き（チップなし）。検索キーワードを見る":"は手薄（作れる品なし）。検索キーワードを見る")
+    }));
+  }
+  wrap.appendChild(btn("cell-add","＋追加",()=>openAdd(cell),{ariaLabel:cellLabel(cell.ingredient,cell.method)+"に自分の料理を追加する"}));
+  return wrap;
+}
+function lineHeaderButton(line,item,cls,spanWrap){
+  const b=btn(cls,null,()=>openLine(line),{ariaLabel:item.label+"の"+(line.axis==="ingredient"?"行":"列")+"をまとめて変更"});
+  const s=el("span",null,item.label);
+  if(spanWrap){const w=el("span",null);w.appendChild(s);b.appendChild(w);}
+  else b.appendChild(s);
+  return b;
+}
+function renderLinePanel(){
+  if(!lineTarget)return null;
+  const item=lineTarget.axis==="ingredient"?ingredientOf(lineTarget.lineId):methodOf(lineTarget.lineId);
+  const dishes=dishesInLine(lineTarget);
+  const hidden=hiddenInLine(lineTarget);
+  const canCount=dishes.filter(x=>stateOf(x.id)==="can").length;
+  const word=lineTarget.axis==="ingredient"?"行":"列";
+  const sec=el("section","panel");sec.id="line-panel";sec.setAttribute("aria-label",item.label+"の"+word+"の一括変更");
+  const head=el("div","panel-head");
+  const left=el("div");
+  left.appendChild(el("p","panel-kicker",(lineTarget.axis==="ingredient"?"主材の行":"調理法の列")+"をまとめて変更"));
+  left.appendChild(el("h2","panel-title",item.label));
+  head.appendChild(left);
+  head.appendChild(btn("close-btn","×",()=>{lineTarget=null;render();},{ariaLabel:"一括変更パネルを閉じる"}));
+  sec.appendChild(head);
+  sec.appendChild(el("p","sub","この"+word+"の"+dishes.length+"品は、いま作れる"+canCount+"品・作ったことない"+(dishes.length-canCount)+"品です。"));
+  const row=el("div","btn-row");
+  row.appendChild(btn("btn btn-accent","この"+word+"を全部「作れる」にする（"+dishes.length+"品）",()=>applyLineState("can"),{disabled:dishes.length===0,ariaLabel:"この"+word+"の"+dishes.length+"品を全部「作れる」にする"}));
+  row.appendChild(btn("btn btn-none","この"+word+"を全部「作ったことない」にする（"+dishes.length+"品）",()=>applyLineState("never"),{disabled:dishes.length===0,ariaLabel:"この"+word+"の"+dishes.length+"品を全部「作ったことない」にする"}));
+  sec.appendChild(row);
+  const div=el("div","divider");
+  div.appendChild(el("p","divider-label","チップの整理（この"+word+"だけ）"));
+  const row2=el("div","btn-row");
+  row2.appendChild(btn("btn btn-surface","この"+word+"を全部外す",()=>applyLineHidden(true),{disabled:dishes.length===0}));
+  if(hidden.length>0)row2.appendChild(btn("btn btn-surface","外した"+hidden.length+"品を戻す",()=>applyLineHidden(false)));
+  div.appendChild(row2);
+  sec.appendChild(div);
+  return sec;
+}
+function renderAddPanel(){
+  if(!addCell)return null;
+  const sec=el("section","panel");sec.id="add-panel";sec.setAttribute("aria-label",cellLabel(addCell.ingredient,addCell.method)+"に自分の料理を追加");
+  const head=el("div","panel-head");
+  const left=el("div");
+  left.appendChild(el("p","panel-kicker","自分の料理を追加"));
+  left.appendChild(el("h2","panel-title",cellLabel(addCell.ingredient,addCell.method)));
+  head.appendChild(left);
+  head.appendChild(btn("close-btn","×",()=>{addCell=null;render();},{ariaLabel:"追加パネルを閉じる"}));
+  sec.appendChild(head);
+  sec.appendChild(el("p","sub","このマス（"+ingredientOf(addCell.ingredient).label+" × "+methodOf(addCell.method).label+"）に、自分の料理を1品足します。追加した料理は最初は「作ったことない」で、チップをタップすると「作れる」に切り替わります。"));
+  sec.appendChild(el("label","field-label","料理名")).setAttribute("for","add-dish-name");
+  const inp=el("input","text-input");inp.id="add-dish-name";inp.type="text";inp.value=addName;inp.placeholder="例：鶏の水炊き";inp.maxLength=60;
+  inp.addEventListener("input",()=>{addName=inp.value;addError=null;const e=document.getElementById("add-error");if(e)e.remove();});
+  inp.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();submitAdd();}});
+  sec.appendChild(inp);
+  if(addError){const p=el("p","alert",addError);p.id="add-error";p.setAttribute("role","alert");sec.appendChild(p);}
+  const row=el("div","btn-row");
+  row.appendChild(btn("btn btn-accent","このマスに追加する",submitAdd));
+  row.appendChild(btn("btn btn-surface","やめる",()=>{addCell=null;render();}));
+  sec.appendChild(row);
+  return sec;
+}
+function renderEditPanel(){
+  if(!editingCustom)return null;
+  const sec=el("section","panel");sec.id="edit-panel";sec.setAttribute("aria-label",editingCustom.name+"（自分の料理）を編集");
+  const head=el("div","panel-head");
+  const left=el("div");
+  left.appendChild(el("p","panel-kicker","自分の料理を編集"));
+  left.appendChild(el("h2","panel-title",editingCustom.name));
+  head.appendChild(left);
+  head.appendChild(btn("close-btn","×",()=>{editingCustom=null;confirmDeleteCustom=false;render();},{ariaLabel:"編集パネルを閉じる"}));
+  sec.appendChild(head);
+  sec.appendChild(el("label","field-label","料理名")).setAttribute("for","edit-dish-name");
+  const inp=el("input","text-input");inp.id="edit-dish-name";inp.type="text";inp.value=editName;inp.maxLength=60;
+  inp.addEventListener("input",()=>{editName=inp.value;editError=null;});
+  sec.appendChild(inp);
+  const grid=el("div","grid2");
+  const mkSelect=(id,label,items,value,onChange)=>{
+    const wrap=el("div");
+    const lab=el("label","field-label",label);lab.setAttribute("for",id);wrap.appendChild(lab);
+    const sel=el("select","select-input");sel.id=id;
+    for(const it of items){const o=el("option",null,it.label);o.value=it.id;if(it.id===value)o.selected=true;sel.appendChild(o);}
+    sel.addEventListener("change",()=>onChange(sel.value));
+    wrap.appendChild(sel);
+    return wrap;
+  };
+  grid.appendChild(mkSelect("edit-dish-ingredient","主材（行）",INGREDIENTS,editIngredient,v=>{editIngredient=v;}));
+  grid.appendChild(mkSelect("edit-dish-method","調理法（列）",METHODS,editMethod,v=>{editMethod=v;}));
+  sec.appendChild(grid);
+  if(editError){const p=el("p","alert",editError);p.setAttribute("role","alert");sec.appendChild(p);}
+  const row=el("div","btn-row");
+  row.appendChild(btn("btn btn-accent","変更を保存する",submitEdit));
+  row.appendChild(btn("btn btn-surface","やめる",()=>{editingCustom=null;confirmDeleteCustom=false;render();}));
+  sec.appendChild(row);
+  const div=el("div","divider");
+  if(confirmDeleteCustom){
+    const cr=el("div","confirm-row");
+    cr.appendChild(el("p",null,"「"+editingCustom.name+"」を消しますか？この料理の記録（作れる／作ったことない）も一緒に消えます。"));
+    cr.appendChild(btn("btn btn-shu","消す",deleteEditingCustom));
+    cr.appendChild(btn("btn btn-surface","やめる",()=>{confirmDeleteCustom=false;render();scrollToEl(document.getElementById("edit-panel"));}));
+    div.appendChild(cr);
+  }else{
+    const delBtn=btn("btn btn-surface","この料理を消す",()=>{confirmDeleteCustom=true;render();scrollToEl(document.getElementById("edit-panel"));});
+    delBtn.style.color="var(--shu)";
+    div.appendChild(delBtn);
+  }
+  sec.appendChild(div);
+  return sec;
+}
+function renderPickedPanel(){
+  if(!picked)return null;
+  const dishes=dishesInCell(picked);
+  const sec=el("section","panel panel-shu");sec.id="picked-panel";sec.setAttribute("aria-label","手薄・空きマスのハイライト");
+  const head=el("div","panel-head");
+  const left=el("div");
+  const k=el("p","panel-kicker panel-kicker-shu",dishes.length===0?"空きマス（チップなし）":"手薄なマス（作れる品なし）");
+  left.appendChild(k);
+  left.appendChild(el("h2","panel-title",cellLabel(picked.ingredient,picked.method)));
+  head.appendChild(left);
+  head.appendChild(btn("close-btn","×",()=>{picked=null;render();},{ariaLabel:"ハイライトを閉じる"}));
+  sec.appendChild(head);
+  if(dishes.length>0){
+    sec.appendChild(el("p","sub","このマスの料理："+dishes.map(x=>x.name+"（"+STATE_LABEL[stateOf(x.id)]+"）").join("、")));
+  }else{
+    sec.appendChild(el("p","sub","このマスには表示中のチップがありません。マスの「＋追加」から、自分の料理をこの組み合わせで足せます。"));
+  }
+  sec.appendChild(el("p",null,"レシピを探すなら、このキーワードで：")).style.marginTop=".75rem";
+  const kw=el("div","btn-row");
+  kw.appendChild(el("code","keyword-code",cellKeyword(picked.ingredient,picked.method)));
+  kw.appendChild(btn("btn btn-accent",copied?"コピーしました":"キーワードをコピー",onCopyKeyword));
+  sec.appendChild(kw);
+  if(copyFailed)sec.appendChild(el("p","note","コピーできませんでした。キーワードを長押ししてコピーしてください。")).style.color="var(--shu)";
+  const again=btn("linklike","別の手薄・空きをひらく",pickRandomBlank);again.style.marginTop=".75rem";
+  sec.appendChild(again);
+  return sec;
+}
+function renderHeader(){
+  const sec=el("section","pt5");
+  const h1=el("h1",null);h1.appendChild(document.createTextNode("作れる料理を地図にすると、"));h1.appendChild(el("br"));h1.appendChild(document.createTextNode("手薄なところが見えてくる。"));
+  sec.appendChild(h1);
+  sec.appendChild(el("p","intro","定番48品は、最初は全部「作ったことない」。チップをタップすると「作れる」に切り替わり、もう一度タップで戻ります。行・列の見出しをタップすれば、その行・列だけをまとめて変更することもできます。「作れる」があるマスだけ色がつきます。毎日の記録はしません。最初に一度、印をつけるだけ。記録はこの端末の中にだけ保存されます。"));
+  const c=counts();
+  const countsDiv=el("div","counts");
+  const mkCount=(label,num,suffix,strongCls)=>{
+    const s=el("span");
+    s.appendChild(document.createTextNode(label+" "));
+    const st=el("strong",strongCls||null,String(num));s.appendChild(st);
+    s.appendChild(document.createTextNode(" "+suffix));
+    return s;
+  };
+  countsDiv.appendChild(mkCount("作れる",c.can,"品","can-num"));
+  countsDiv.appendChild(mkCount("作ったことない",c.never,"品"));
+  countsDiv.appendChild(mkCount("手薄",thinCells().length,"マス"));
+  const emptySpan=el("span");
+  emptySpan.appendChild(document.createTextNode("空き "));
+  const st=el("strong",null,String(emptyCells().length));emptySpan.appendChild(st);
+  emptySpan.appendChild(document.createTextNode(" マス"));
+  const dimS=el("span","dim"," / 36");emptySpan.appendChild(dimS);
+  countsDiv.appendChild(emptySpan);
+  sec.appendChild(countsDiv);
+  // 凡例1
+  const leg=el("div","legend");
+  leg.appendChild(el("span","dim","チップをタップで切替："));
+  leg.appendChild(el("span","chip-sample chip-sample-can","作れる"));
+  leg.appendChild(el("span",null,"⇄")).setAttribute("aria-hidden","true");
+  leg.appendChild(el("span","chip-sample chip-sample-never","作ったことない"));
+  leg.appendChild(el("span","dim","／ 見出し（主材・調理法）をタップすると、その行・列をまとめて変更できます"));
+  sec.appendChild(leg);
+  // 凡例2（手薄・空きの定義を常時表示）
+  const leg2=el("div","legend2");
+  leg2.appendChild(el("span","tag-thin","手薄"));
+  leg2.appendChild(el("span","dim","＝ チップはあるのに「作れる」が1品もないマス"));
+  leg2.appendChild(el("span","tag-empty","空き"));
+  leg2.appendChild(el("span","dim","＝ チップが1つもないマス（外したチップは数えません）"));
+  sec.appendChild(leg2);
+  // ボタン行
+  const v=visibleDishes();
+  const allCan=v.length>0&&v.every(x=>stateOf(x.id)==="can");
+  const row=el("div","btn-row");
+  row.appendChild(btn("btn btn-shu","手薄・空きから1マスひらく",pickRandomBlank,{disabled:blankCells().length===0}));
+  row.appendChild(btn("btn "+(allCan?"btn-none":"btn-accent"),"全部切り替える："+(allCan?"全部「作ったことない」にする":"全部「作れる」にする")+"（"+v.length+"品）",toggleAllState,{
+    disabled:v.length===0,
+    ariaLabel:allCan?("表示中の全"+v.length+"品を全部「作ったことない」に切り替える。もう一度押すと全部「作れる」に戻る"):("表示中の全"+v.length+"品を全部「作れる」に切り替える。もう一度押すと全部「作ったことない」に戻る")
+  }));
+  row.appendChild(btn("btn "+(organizing?"btn-accent":"btn-surface"),organizing?"整理を終わる":"チップを整理",()=>{organizing=!organizing;render();},{ariaPressed:String(organizing)}));
+  sec.appendChild(row);
+  sec.appendChild(el("p","note","各マスの「＋追加」から、いつでも自分の料理を足せます。「チップを整理」では、チップを外す・戻すことに加えて、自分の料理の名前や場所を変えたり消したりできます。"));
+  if(organizing)sec.appendChild(el("p","note","整理中：定番チップをタップするとマップから外れます。自分の料理のチップをタップすると、名前・場所の変更と削除ができます。行・列の見出しからは、その行・列をまとめて外す／戻すこともできます。外したチップは下のリストからも戻せます。"));
+  return sec;
+}
+function renderDesktopMap(){
+  const wrap=el("div","desktop-map");
+  const grid=el("div","grid-map");
+  grid.style.gridTemplateColumns="2.75rem repeat(6, minmax(0, 1fr))";
+  grid.appendChild(el("div"));
+  for(const met of METHODS){
+    const cellWrap=el("div");
+    cellWrap.appendChild(lineHeaderButton({axis:"method",lineId:met.id},met,"head-btn head-col",false));
+    grid.appendChild(cellWrap);
+  }
+  for(const ing of INGREDIENTS){
+    grid.appendChild(lineHeaderButton({axis:"ingredient",lineId:ing.id},ing,"head-row",true));
+    for(const met of METHODS){
+      const cw=el("div");
+      cw.appendChild(renderCell({ingredient:ing.id,method:met.id}));
+      grid.appendChild(cw);
+    }
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+function renderMobileMap(){
+  const wrap=el("div","mobile-map");
+  wrap.appendChild(el("p","ov-note","行＝主材、列＝調理法です。まず全体マップで色のついていないマスを確認し、下の明細でチップを切り替えてください。見出しをタップすると行・列をまとめて変更できます。"));
+  const grid=el("div","grid-map");
+  grid.style.gridTemplateColumns="2.25rem repeat(6, minmax(0, 1fr))";
+  grid.setAttribute("aria-label","全体マップ（行は主材、列は調理法）");
+  grid.appendChild(el("div"));
+  for(const met of METHODS){
+    grid.appendChild(btn("ov-head",met.label,()=>openLine({axis:"method",lineId:met.id}),{ariaLabel:met.label+"の列をまとめて変更"}));
+  }
+  for(const ing of INGREDIENTS){
+    grid.appendChild(btn("ov-rowhead",ing.label,()=>openLine({axis:"ingredient",lineId:ing.id}),{ariaLabel:ing.label+"の行をまとめて変更"}));
+    for(const met of METHODS){
+      const cell={ingredient:ing.id,method:met.id};
+      const ds=dishesInCell(cell);
+      const empty=ds.length===0;
+      const thin=!empty&&isThin(cell);
+      const canCount=ds.filter(x=>stateOf(x.id)==="can").length;
+      const selected=picked&&picked.ingredient===ing.id&&picked.method===met.id;
+      const b=btn("ov-cell "+(empty?"ov-empty":thin?"ov-thin":"ov-can")+(selected?" ov-selected":""),empty?"空":thin?"―":String(canCount),()=>openPicked(cell),{
+        ariaLabel:cellLabel(ing.id,met.id)+"："+(empty?"空き（チップなし）":thin?"手薄（作れる品なし）":"作れる"+canCount+"品")+"。詳細を見る"
+      });
+      grid.appendChild(b);
+    }
+  }
+  wrap.appendChild(grid);
+  wrap.appendChild(el("p","ov-caption","数字＝そのマスで「作れる」品数／「―」＝手薄（チップはあるが作れる品なし）／「空」＝空き（チップなし）。マスをタップすると検索キーワードが出ます。"));
+  // 明細
+  const list=el("div","detail-list");
+  for(const ing of INGREDIENTS){
+    const rowDishes=visibleDishes().filter(x=>x.ingredient===ing.id);
+    const rowCan=rowDishes.filter(x=>stateOf(x.id)==="can").length;
+    const rowThin=METHODS.filter(met=>isThin({ingredient:ing.id,method:met.id})).length;
+    const rowEmpty=METHODS.filter(met=>isEmpty({ingredient:ing.id,method:met.id})).length;
+    const section=el("section");section.setAttribute("aria-label",ing.label+"の明細");
+    const head=el("div","detail-head");
+    const h3=el("h3");
+    h3.appendChild(lineHeaderButton({axis:"ingredient",lineId:ing.id},ing,"",false));
+    head.appendChild(h3);
+    head.appendChild(el("span","meta","作れる "+rowCan+"品 ・ 手薄 "+rowThin+"マス ・ 空き "+rowEmpty+"マス ・ 見出しタップで行をまとめて変更"));
+    section.appendChild(head);
+    const box=el("div","detail-box");
+    for(const met of METHODS){
+      const rowEl=el("div","detail-row");
+      rowEl.appendChild(btn("detail-method",met.label,()=>openLine({axis:"method",lineId:met.id}),{ariaLabel:met.label+"の列をまとめて変更"}));
+      const cw=el("div","detail-cellwrap");
+      cw.appendChild(renderCell({ingredient:ing.id,method:met.id}));
+      rowEl.appendChild(cw);
+      box.appendChild(rowEl);
+    }
+    section.appendChild(box);
+    list.appendChild(section);
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+function renderHiddenSection(){
+  const hidden=hiddenDishes();
+  if(!organizing&&hidden.length===0)return null;
+  const sec=el("section","section");sec.setAttribute("aria-label","外したチップ");
+  sec.appendChild(el("h2",null,"外したチップ"));
+  if(hidden.length===0){
+    sec.appendChild(el("p","note","外したチップはありません。")).style.fontSize=".875rem";
+  }else{
+    const ul=el("ul","hidden-list");
+    for(const dish of hidden){
+      const li=el("li");
+      const b=btn(null,null,()=>setHiddenFlags([dish.id],false),{ariaLabel:dish.name+"をマップに戻す"});
+      b.appendChild(document.createTextNode(dish.name));
+      const s=el("span","dim","（"+ingredientOf(dish.ingredient).label+"×"+methodOf(dish.method).label+"）");
+      b.appendChild(s);
+      b.appendChild(document.createTextNode(" ↩ 戻す"));
+      li.appendChild(b);
+      ul.appendChild(li);
+    }
+    sec.appendChild(ul);
+  }
+  return sec;
+}
+function renderIO(){
+  const sec=el("section","section section-io");sec.id="io-section";sec.setAttribute("aria-label","記録の書き出しと読み込み");
+  sec.appendChild(el("h2",null,"記録をファイルに残す・戻す"));
+  sec.appendChild(el("p","note","いまの分類（作れる／作ったことない）と外したチップの情報に加えて、追加した自分の料理もJSONで書き出して保存できます。戻すときは、ファイルを選ぶか、JSONを貼り付けてください。記録はこの端末の中にだけ保存されるので、機種変更やブラウザのデータ消去に備えて、ときどき書き出しておくのがおすすめです。")).style.fontSize=".875rem";
+  // 書き出し
+  const exWrap=el("div");exWrap.style.marginTop="1rem";
+  exWrap.appendChild(el("h3",null,"書き出し"));
+  const exRow=el("div","btn-row");
+  exRow.appendChild(btn("btn btn-accent","JSONを書き出す",onExport));
+  if(exportJson){
+    exRow.appendChild(btn("btn btn-surface","ファイルにダウンロード",onDownloadJson));
+    const cb=btn("btn btn-surface",exportCopied?"コピーしました":"JSONをコピー",onCopyExportJson);
+    cb.id="copy-export-btn";
+    exRow.appendChild(cb);
+  }
+  exWrap.appendChild(exRow);
+  if(exportError){const p=el("p","alert",exportError);p.setAttribute("role","alert");exWrap.appendChild(p);}
+  if(exportJson){
+    const lab=el("label","sr-only","書き出したJSON");lab.setAttribute("for","export-json-text");exWrap.appendChild(lab);
+    const ta=el("textarea","json");ta.id="export-json-text";ta.readOnly=true;ta.value=exportJson;ta.rows=8;
+    exWrap.appendChild(ta);
+    exWrap.appendChild(el("p","note","端末によってはダウンロードがファイルにならないことがあります。その場合は、このJSONをコピーしてメモなどに貼って保存してください。"));
+  }
+  sec.appendChild(exWrap);
+  // 読み込み
+  const imWrap=el("div");imWrap.style.marginTop="1.5rem";
+  imWrap.appendChild(el("h3",null,"読み込み"));
+  imWrap.appendChild(el("p","note","読み込むと、今の記録と比べて違うところだけを書き換えます。ファイルに含まれない品は初期状態（作ったことない・表示）に戻り、ファイルにない自分の料理は消えます。今の記録と差がなければ、その旨を表示して終わります。形式が違うJSONは読み込まず、今の記録は壊れません。"));
+  const fileRow=el("div","btn-row");
+  const fileInput=el("input");fileInput.type="file";fileInput.accept=".json,application/json";fileInput.setAttribute("aria-label","読み込むJSONファイル");fileInput.hidden=true;
+  fileInput.addEventListener("change",()=>{onPickImportFile(fileInput.files&&fileInput.files[0]);fileInput.value="";});
+  fileRow.appendChild(btn("btn btn-surface","JSONファイルを選ぶ",()=>fileInput.click()));
+  fileRow.appendChild(fileInput);
+  imWrap.appendChild(fileRow);
+  const lab2=el("label","sr-only","読み込むJSONを貼り付け");lab2.setAttribute("for","import-json-text");imWrap.appendChild(lab2);
+  const ta=el("textarea","json");ta.id="import-json-text";ta.rows=6;ta.placeholder="ここに書き出したJSONを貼り付けても読み込めます";ta.value=importText;
+  ta.addEventListener("input",()=>{
+    importText=ta.value;importError=null;importDone=null;
+    if(confirmImport){confirmImport=false;render();return;}
+    // 再描画すると入力中のフォーカスが外れるため、ボタンの有効・無効だけを直接切り替える
+    const ib=document.getElementById("import-start-btn");
+    if(ib)ib.disabled=ta.value.trim().length===0;
+    const ae=document.querySelector('#io-section [role="alert"]');if(ae)ae.remove();
+    const se=document.querySelector('#io-section [role="status"]');if(se)se.remove();
+  });
+  imWrap.appendChild(ta);
+  if(importError){const p=el("p","alert",importError);p.setAttribute("role","alert");imWrap.appendChild(p);}
+  if(importDone){const p=el("p","status-ok",importDone);p.setAttribute("role","status");imWrap.appendChild(p);}
+  if(confirmImport){
+    const cr=el("div","confirm-row");cr.style.marginTop=".5rem";
+    cr.appendChild(el("p",null,"読み込んだ内容に合わせて、今の記録との差分を書き換えます。よろしいですか？"));
+    cr.appendChild(btn("btn btn-shu","置き換える",onImport));
+    cr.appendChild(btn("btn btn-surface","やめる",()=>{confirmImport=false;render();scrollToEl(document.getElementById("io-section"));}));
+    imWrap.appendChild(cr);
+  }else{
+    const b=btn("btn btn-accent","読み込んで置き換える",onImport,{disabled:importText.trim().length===0});
+    b.id="import-start-btn";
+    b.style.marginTop=".5rem";
+    imWrap.appendChild(b);
+  }
+  sec.appendChild(imWrap);
+  return sec;
+}
+function renderReset(){
+  const sec=el("section","reset-zone");
+  if(confirmReset){
+    const cr=el("div","confirm-row");
+    cr.appendChild(el("p",null,"分類と整理の記録をすべて消しますか？（全部「作ったことない」に戻り、追加した自分の料理も消えます）"));
+    cr.appendChild(btn("btn btn-shu","消す",doReset));
+    cr.appendChild(btn("btn btn-surface","やめる",()=>{confirmReset=false;render();}));
+    sec.appendChild(cr);
+  }else{
+    sec.appendChild(btn("linklike linklike-dim","記録をすべて消して最初から",()=>{confirmReset=true;render();}));
+  }
+  return sec;
+}
+function render(){
+  const app=document.getElementById("app");
+  app.textContent="";
+  app.appendChild(renderHeader());
+  const lp=renderLinePanel();if(lp)app.appendChild(lp);
+  const ap=renderAddPanel();if(ap)app.appendChild(ap);
+  const ep=renderEditPanel();if(ep)app.appendChild(ep);
+  const pp=renderPickedPanel();if(pp)app.appendChild(pp);
+  const mapSec=el("section","map-section");mapSec.setAttribute("aria-label","料理マップ");
+  mapSec.appendChild(renderDesktopMap());
+  mapSec.appendChild(renderMobileMap());
+  app.appendChild(mapSec);
+  const hs=renderHiddenSection();if(hs)app.appendChild(hs);
+  app.appendChild(renderIO());
+  app.appendChild(renderReset());
+}
+
+/* ===== 初期化 ===== */
+load();
+render();
+</script>
+</body>
+</html>
